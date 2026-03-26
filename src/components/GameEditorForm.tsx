@@ -48,6 +48,7 @@ export const GameEditorForm = ({
   const gameTags = tags.filter((tag) => value.tags.includes(tag.id));
   const [tagSearchValue, setTagSearchValue] = useState('');
   const [creatingTag, setCreatingTag] = useState(false);
+  const [tagKeyboardSelecting, setTagKeyboardSelecting] = useState(false);
   const nameInputRef = useRef<InputRef | null>(null);
 
   const getJumpUrl = (rawUrl: string) => {
@@ -420,15 +421,32 @@ export const GameEditorForm = ({
           <Select
             mode="multiple"
             value={value.tags}
-            onChange={(selectedTags) => updateField('tags', selectedTags)}
-            onSearch={setTagSearchValue}
+            onChange={(selectedTags) => {
+              updateField('tags', selectedTags);
+              setTagKeyboardSelecting(false);
+            }}
+            onSearch={(nextValue) => {
+              setTagSearchValue(nextValue);
+              setTagKeyboardSelecting(false);
+            }}
             searchValue={tagSearchValue}
             onInputKeyDown={(event) => {
+              if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+                setTagKeyboardSelecting(true);
+                return;
+              }
+
               if (event.key !== 'Enter') return;
+              if (tagKeyboardSelecting) {
+                setTagKeyboardSelecting(false);
+                return;
+              }
+              if (!tagSearchValue.trim()) return;
               event.preventDefault();
               event.stopPropagation();
               void handleCreateTagFromInput();
             }}
+            onBlur={() => setTagKeyboardSelecting(false)}
             style={{ width: '100%' }}
             placeholder="选择标签，输入后回车可新建"
             loading={creatingTag}

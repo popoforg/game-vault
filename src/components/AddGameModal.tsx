@@ -13,13 +13,13 @@ interface AddGameModalProps {
     onClose: () => void;
 }
 
-const buildInitialGame = (platforms: string[]): EditableGame => ({
+const buildInitialGame = (): EditableGame => ({
     name: '',
     aliases: [],
     thumbnail: '',
     thumbnails: [],
     gameUrl: '',
-    platform: [platforms[0] || 'PC'],
+    platform: [],
     rating: 0,
     stars: 1,
     synopsis: '',
@@ -36,12 +36,12 @@ export const AddGameModal = ({ open, onClose }: AddGameModalProps) => {
     }, [customPlatforms, deletedPlatforms]);
 
     const [draftGame, setDraftGame] = useState<EditableGame>(() =>
-        buildInitialGame(allPlatforms)
+        buildInitialGame()
     );
 
     useEffect(() => {
         if (open) {
-            setDraftGame(buildInitialGame(allPlatforms));
+            setDraftGame(buildInitialGame());
             setExpandedTagId(null);
         }
     }, [open, allPlatforms]);
@@ -80,7 +80,7 @@ export const AddGameModal = ({ open, onClose }: AddGameModalProps) => {
     };
 
     const handleCancel = () => {
-        setDraftGame(buildInitialGame(allPlatforms));
+        setDraftGame(buildInitialGame());
         setExpandedTagId(null);
         onClose();
     };
@@ -116,7 +116,8 @@ export const AddGameModal = ({ open, onClose }: AddGameModalProps) => {
       });
 
       message.success('游戏添加成功');
-      handleCancel();
+      setDraftGame(buildInitialGame());
+      setExpandedTagId(null);
     } catch (error) {
       message.error(error instanceof Error ? error.message : '游戏添加失败');
     }

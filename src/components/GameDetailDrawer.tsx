@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Drawer, Space, Button, message } from 'antd';
 import { DeleteOutlined, SaveOutlined } from '@ant-design/icons';
 import { useGameStore } from '../store';
@@ -19,12 +19,14 @@ export const GameDetailDrawer = () => {
         closeRightDrawer,
         updateGame,
         deleteGame,
+        addTag,
         customPlatforms,
         deletedPlatforms,
     } = useGameStore();
 
     const [localGame, setLocalGame] = useState<EditableGame | null>(null);
     const [expandedTagId, setExpandedTagId] = useState<string | null>(null);
+    const initializedGameIdRef = useRef<string | null>(null);
 
     const editingGame = games.find((g) => g.id === editingGameId);
 
@@ -33,25 +35,32 @@ export const GameDetailDrawer = () => {
     const allPlatforms = [...availableBuiltIns, ...customPlatforms];
 
     useEffect(() => {
-        if (editingGame) {
-            setLocalGame({
-                name: editingGame.name,
-                aliases: [...editingGame.aliases],
-                thumbnail: editingGame.thumbnail,
-                thumbnails: resolveEditorThumbnails(
-                    editingGame.thumbnail,
-                    editingGame.thumbnails
-                ),
-                gameUrl: editingGame.gameUrl || '',
-                platform: [...editingGame.platform],
-                rating: editingGame.rating,
-                stars: editingGame.stars,
-                synopsis: editingGame.synopsis,
-                tags: [...editingGame.tags],
-            });
-            setExpandedTagId(null);
+        if (!rightDrawerOpen) {
+            initializedGameIdRef.current = null;
+            return;
         }
-    }, [editingGame]);
+
+        if (!editingGame) return;
+        if (initializedGameIdRef.current === editingGame.id) return;
+
+        initializedGameIdRef.current = editingGame.id;
+        setLocalGame({
+            name: editingGame.name,
+            aliases: [...editingGame.aliases],
+            thumbnail: editingGame.thumbnail,
+            thumbnails: resolveEditorThumbnails(
+                editingGame.thumbnail,
+                editingGame.thumbnails
+            ),
+            gameUrl: editingGame.gameUrl || '',
+            platform: [...editingGame.platform],
+            rating: editingGame.rating,
+            stars: editingGame.stars,
+            synopsis: editingGame.synopsis,
+            tags: [...editingGame.tags],
+        });
+        setExpandedTagId(null);
+    }, [editingGame, rightDrawerOpen]);
 
     if (!localGame) return null;
 
@@ -76,7 +85,6 @@ export const GameDetailDrawer = () => {
                     thumbnails,
                 });
                 message.success('游戏信息保存成功');
-                closeRightDrawer();
             } catch (error) {
                 message.error(error instanceof Error ? error.message : '游戏保存失败');
             }
@@ -97,6 +105,35 @@ export const GameDetailDrawer = () => {
 
     const handleTagClick = (tagId: string) => {
         setExpandedTagId(expandedTagId === tagId ? null : tagId);
+    };
+
+    const handleCreateTag = async (rawName: string) => {
+        const name = rawName.trim();
+        if (!name) return null;
+
+        const existingTag = tags.find(
+            (tag) => tag.name.trim().toLowerCase() === name.toLowerCase()
+        );
+        if (existingTag) {
+            return existingTag.id;
+        }
+
+        try {
+            await addTag(name, '');
+            const latestTags = useGameStore.getState().tags;
+            const createdTag =
+                latestTags.find((tag) => tag.name.trim().toLowerCase() === name.toLowerCase()) ??
+                null;
+            if (createdTag) {
+                message.success(`已创建标签：${createdTag.name}`);
+                return createdTag.id;
+            }
+            message.success('标签已创建');
+            return null;
+        } catch (error) {
+            message.error(error instanceof Error ? error.message : '标签创建失败');
+            return null;
+        }
     };
 
     return (
@@ -143,6 +180,7 @@ export const GameDetailDrawer = () => {
                 showTagInfo
                 expandedTagId={expandedTagId}
                 onTagClick={handleTagClick}
+                onCreateTag={handleCreateTag}
             />
         </Drawer>
     );
